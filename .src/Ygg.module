@@ -1,0 +1,93 @@
+' Gambas module file
+
+Public Function GetPeersList() As YggPeer[] 
+  
+
+  Dim hClient As HttpClient
+  Dim sBuffer As String
+
+  hClient = New HttpClient As "hClient"
+  hClient.URL = "https://publicpeers.neilalexander.dev/publicnodes.json"
+  hClient.Async = False
+  hClient.Timeout = 60
+  hClient.Get
+
+  If hClient.Status < 0 Then
+    Print "ERROR"
+  Else
+    ' Success - read the data
+    If Lof(hClient) Then sBuffer = Read #hClient, Lof(hClient)
+    ' Print sBuffer
+    Dim peersJson As Variant
+    peersJson = JSON.Decode(sBuffer)
+    Dim peers As New YggPeer[]
+    Print peersJson
+
+    Dim currentPeer As New YggPeer
+
+    For Each obj As Collection In peersJson
+      Dim country As String = peersJson.Key
+      ' Print "Country is " & country
+      ' Print "Obj: " & Str$(obj) & Str$(obj.Length)
+      For Each ent As Collection In obj
+        currentPeer = New YggPeer
+        currentPeer.Addr = obj.Key
+        currentPeer.Country = Replace$(country, ".md", "")
+        currentPeer.Up = CBool(ent["up"])
+        peers.Add(currentPeer)
+        currentPeer = Null
+      Next
+    Next
+    
+    For Each p As YggPeer In peers
+      Print p.Country & p.Addr & p.Up
+    Next
+    End If
+    Return peers
+
+End
+
+Public Function CountriesFromPeers(peers As YggPeer[]) As String[]
+  
+  Dim Res As New String[] 
+  For Each p As YggPeer In peers
+    If Res.Exist(p.Country) = False Then
+      Res.Add(p.Country)
+    Endif
+  Next
+  
+  Return Res
+End 
+
+Public Function GenYggConfigfile() 
+  If Not Exist("/tmp/ygg.conf") Then
+    Shell "yggdrasil -genconf -json > /tmp/ygg.conf" Wait
+    Print "Generated...."
+  Endif 
+End
+
+Public Function ReadYggConfigfile() As String
+  If Not Exist("/tmp/ygg.conf") Then
+    GenYggConfigfile
+  Endif
+  Return File.Load("/tmp/ygg.conf")
+End
+  
+  
+Public Sub ApplyPeersToConfigFile(peers As String[])
+  
+  Dim conf As Collection = JSON.Decode(ReadYggConfigfile())
+  conf["Peers"] = peers
+  Dim s As String = JSON.Encode(conf)
+  File.Save("/tmp/ygg.conf", s)
+End
+
+Public Sub RunYgg(confpath As String) As Process
+  Dim p As Process 
+  p = Shell "yggdrasil -useconffile " & confpath
+  Return p
+End
+
+  
+
+

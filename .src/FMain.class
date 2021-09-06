@@ -1,0 +1,53 @@
+' Gambas class file
+
+Public peers As YggPeer[]
+Public yggproc As Process
+
+Public Sub Form_Open()
+  Me.peers = Ygg.GetPeersList()
+  Dim countries As String[] = Ygg.CountriesFromPeers(Me.peers)
+  For Each c As String In countries
+    lstBoxYggCountries.Add(c)
+  Next
+End
+
+
+Public Sub btnConnect_Click()
+  Dim countriesSelected As New String[]
+  Dim pos As Integer = 0
+  While pos < lstBoxYggCountries.Count
+    If lstBoxYggCountries[pos].Selected = True Then
+      countriesSelected.Add(lstBoxYggCountries[pos].Text)
+    Endif
+    Inc pos
+
+  Wend 
+  Print "selected " & countriesSelected.Count
+  Dim peersList As New String[]
+  For Each peer As YggPeer In Me.peers 
+    If countriesSelected.Exist(peer.Country) Then
+      Print "will use peer: " & peer.Addr
+      peersList.Add(peer.Addr)
+    Endif
+  Next
+  Ygg.GenYggConfigfile()
+  Ygg.ApplyPeersToConfigFile(peersList)
+  ' Message.Info("Generated new config for Ygg")
+  Me.yggproc = Ygg.RunYgg("/tmp/ygg.conf")
+  btnConnect.Enabled = False
+  btnDisconnect.Enabled = True
+  
+  
+  
+  
+  
+End
+
+Public Sub btnDisconnect_Click()
+
+  Me.yggproc.Kill()
+  btnDisconnect.Enabled = False
+  btnConnect.Enabled = True
+  
+
+End

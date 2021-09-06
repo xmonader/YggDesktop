@@ -1,0 +1,6 @@
+' Gambas class file
+
+Public Country As String
+Public Addr As String
+Public Up As Boolean
+Public LastOnline As Date
